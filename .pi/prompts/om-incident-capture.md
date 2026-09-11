@@ -4,6 +4,12 @@ description: "Capture an incident from Slack channels, DMs, and threads into str
 
 # Incident Capture
 
+> **⚠️ Slack access unavailable under this agent.** This harness has no Slack MCP server (`slack_read_channel`, `slack_read_thread`, `slack_read_user_profile` are absent) and the `slack-archaeologist` subagent is not ported. Do not attempt Slack reads — every call fails.
+>
+> When the user invokes this command with Slack URLs, say so up front and offer the alternatives:
+> 1. **Run it in Claude Code**, where the Slack MCP server is registered and the command works as written.
+> 2. **Paste the Slack material** (incident channel messages, threads, DMs) and continue from step 3 — the timeline, analysis, people-note, and brag-doc halves work identically against pasted content. People notes come from names in the pasted material; Slack profile fetches are skipped.
+
 Capture an incident from Slack channels, DMs, and threads into structured vault notes. Produces a complete incident work note with timeline, people, analysis, and brag doc entry.
 
 ## Usage
