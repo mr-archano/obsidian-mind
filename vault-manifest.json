@@ -34,6 +34,7 @@
     ".gitignore",
     ".mcp.json",
     ".claude/**",
+    ".pi/**",
     ".claude-plugin/**",
     ".codex/**",
     ".gemini/**",
