@@ -4,6 +4,12 @@ description: "Deep scan Slack channels and DMs for evidence involving a person o
 
 # Slack Deep Scan
 
+> **⚠️ Unavailable under this agent.** This command reads live Slack through a Slack MCP server (`slack_read_channel`, `slack_read_thread`, `slack_search_public_and_private`, `slack_read_user_profile`) which is NOT connected to this harness. Do not attempt Slack reads — the tools are absent, and every call fails.
+>
+> When the user invokes this command, say so up front and offer the alternatives:
+> 1. **Run it in Claude Code**, where the Slack MCP server is registered and the command works as written.
+> 2. **Paste the Slack material into the conversation** (messages, threads, DMs) and continue with this command from step 4 — the extraction, evidence-classification, and vault-filing halves work identically against pasted content.
+
 Deep scan Slack channels and DMs for evidence involving a specific person or project. Extracts every touchpoint with timestamps for review evidence or project documentation.
 
 ## Usage
