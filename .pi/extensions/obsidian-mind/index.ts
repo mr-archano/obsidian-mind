@@ -43,6 +43,7 @@ import {
 } from "./briefing.ts";
 import { refreshQmdFor, validateWrittenFile } from "./validate.ts";
 import { openBriefingPopup } from "./viewer.ts";
+import { registerQmdTools } from "./qmd-tools.ts";
 
 // Session-end checklist text — verbatim from the Stop hook.
 const SESSION_END_CHECKLIST = [
@@ -85,6 +86,10 @@ function pruneBackups(dir: string, retain: number): void {
 }
 
 export default function (pi: ExtensionAPI) {
+	// QMD typed tools (phase 2) — registered only when qmd actually resolves;
+	// otherwise the qmd skill's documented fallbacks apply.
+	registerQmdTools(pi, process.cwd());
+
 	// Per-session state. Rebuilt on every session_start.
 	let briefingText: string | null = null;
 	let briefingInjected = false;
