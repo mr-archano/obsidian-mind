@@ -42,6 +42,7 @@ import {
 	type BriefingMode,
 } from "./briefing.ts";
 import { refreshQmdFor, validateWrittenFile } from "./validate.ts";
+import { openBriefingPopup } from "./viewer.ts";
 
 // Session-end checklist text — verbatim from the Stop hook.
 const SESSION_END_CHECKLIST = [
@@ -87,7 +88,6 @@ export default function (pi: ExtensionAPI) {
 	// Per-session state. Rebuilt on every session_start.
 	let briefingText: string | null = null;
 	let briefingInjected = false;
-
 	pi.on("session_start", async (event, ctx) => {
 		const root = ctx.cwd;
 		// resume/fork → the static bulk is already in-conversation; the
@@ -108,14 +108,23 @@ export default function (pi: ExtensionAPI) {
 		let systemPrompt = event.systemPrompt;
 		let message: { customType: string; content: string; display: boolean } | undefined;
 
-		// First turn of the session: inject the cached briefing as a message.
+		// First turn of the session: inject the cached briefing. It is stored
+		// in the session and sent to the LLM but NOT rendered in the
+		// transcript (display: false) — the user reads it on demand via the
+		// /om-briefing popup; the status line advertises that.
 		if (briefingText && !briefingInjected) {
 			briefingInjected = true;
 			message = {
 				customType: "obsidian-mind-briefing",
 				content: briefingText,
-				display: true,
+				display: false,
 			};
+			if (ctx.hasUI) {
+				ctx.ui.setStatus(
+					"om-briefing",
+					`context briefing: ${briefingText.length} chars — /om-briefing to view`,
+				);
+			}
 		}
 
 		// UserPromptSubmit equivalent: classify the prompt, emit routing
@@ -234,5 +243,23 @@ export default function (pi: ExtensionAPI) {
 				? "\n\nVault Hygiene (drift detected):\n" + hygieneLines.join("\n")
 				: "");
 		ctx.ui.notify(message, "info");
+	});
+
+	// On-demand briefing viewer: a scrollable overlay popup with the exact
+	// text the model was injected. Builds on demand if the session never
+	// injected one (e.g. reload kept an old cache out).
+	pi.registerCommand("om-briefing", {
+		description: "Show the session context briefing (popup)",
+		handler: async (_args, ctx) => {
+			if (!ctx.hasUI) return;
+			let text = briefingText;
+			if (text === null) {
+				const manifestJson = readManifest(ctx.cwd);
+				const { notes } = prepareQmd(ctx.cwd, manifestJson);
+				text = buildBriefing(ctx.cwd, manifestJson, "full", notes);
+				briefingText = text;
+			}
+			openBriefingPopup(ctx.ui, text);
+		},
 	});
 }
