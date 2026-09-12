@@ -8,7 +8,10 @@ tags:
 
 # Skills
 
-Custom slash commands, subagents, and reusable workflows. Defined in `.claude/commands/` and `.claude/agents/`. **This note is the canonical command catalog** for agents that don't get the in-session skills injection (Codex, Gemini, Cursor) — keep it current when commands change; CLAUDE.md deliberately carries no command table.
+Custom slash commands, subagents, and reusable workflows. Defined in `.claude/commands/` and `.claude/agents/` (ported for pi to `.pi/prompts/` and `.pi/agents/`). **This note is the canonical command catalog** for agents that don't get the in-session skills injection (Codex, Gemini, Cursor, pi) — keep it current when commands change; CLAUDE.md deliberately carries no command table.
+
+> [!NOTE] Harness notes (pi port)
+> Under pi: commands live in `.pi/prompts/` (identical bodies), subagents in `.pi/agents/` (same frontmatter, `max_turns` spelling, no fixed model), the hooks run through the `.pi/extensions/obsidian-mind/` extension (same briefing/validation/hygiene behavior), QMD is registered as native tools `qmd_query` / `qmd_get` / `qmd_multi_get` / `qmd_status`, and the cross-repo layer is `.pi/om-memory.ts` (the `om_*` tools) instead of the MCP server. Slack-dependent commands (`/om-slack-scan`, Slack halves of `/om-incident-capture`, the `slack-archaeologist` agent) are unavailable under pi until a Slack MCP bridge is installed — the prompts say so and offer pasted-transcript paths.
 
 ## Slash Commands
 
@@ -96,7 +99,7 @@ Custom slash commands, subagents, and reusable workflows. Defined in `.claude/co
 | `review-fact-checker` | Verify every claim in a review draft against vault sources | `/om-self-review`, `/om-review-peer` |
 | `vault-migrator` | Classify, transform, and migrate content from a source vault | `/om-vault-upgrade` |
 
-Subagents run in isolated context windows via `.claude/agents/`. They don't pollute the main conversation.
+Subagents run in isolated context windows via `.claude/agents/` (pi: `.pi/agents/`, driven by the `Agent` tool from the pi-subagents extension). They don't pollute the main conversation. `slack-archaeologist` is Claude Code/Codex/Gemini only for now — it needs Slack MCP access pi does not have; `people-profiler`'s Slack lookups are unavailable under pi and unknown profile fields stay blank there.
 
 ## Hooks
 
@@ -108,6 +111,8 @@ Subagents run in isolated context windows via `.claude/agents/`. They don't poll
 | PreCompact | Before context compaction | Back up session transcript to `thinking/session-logs/` |
 | Stop | End of session | Checklist: archive, update indexes, check orphans |
 
+Under pi the same five run as extension events in `.pi/extensions/obsidian-mind/` (`session_start`/`before_agent_start`, `tool_result` on write/edit, `session_before_compact`, `agent_settled`), importing the same tested lib modules. The briefing is injected invisibly (model-only) — read it anytime with `/om-briefing`.
+
 ## Semantic Search (QMD)
 
 If QMD is installed (`npm install -g @tobilu/qmd`), the vault has semantic search. Every command takes `--index <name>`, where `<name>` is `vault-manifest.json`'s `qmd_index` field when set and otherwise the vault folder name slugified:
@@ -118,6 +123,8 @@ If QMD is installed (`npm install -g @tobilu/qmd`), the vault has semantic searc
 - `qmd --index <name> update && qmd --index <name> embed` — refresh index after bulk changes
 
 SessionStart hook runs `qmd --index <name> update` automatically, reading the index name from the manifest. First-time setup on a fresh clone: `node --experimental-strip-types .scripts/qmd-bootstrap.ts`. See `.claude/skills/qmd/SKILL.md` for full reference, and [[Memories]] for the topics QMD is most often asked to find across the vault.
+
+**Preferred surfaces, by harness:** Claude Code calls the MCP tools (`mcp__qmd__query` …); pi calls the registered tools (`qmd_query`, `qmd_get`, `qmd_multi_get`, `qmd_status` — same index, typed args); the CLI is the fallback everywhere.
 
 ## The `om` MCP Server (reaching this vault from another repo)
 
@@ -138,6 +145,8 @@ Two prompts you invoke yourself from the `/` menu: `recall_topic`, `prior_art`. 
 **`reason` is the slow one.** The rest answer without inference; this one spawns a session, so it takes seconds to minutes. Reach for it when `search` or `recall` returned the notes but not the answer — it seeds itself from search, so there is no need to search first. It runs on your own CLI default model unless `reason.model` pins one, nothing about it is capped, and every call is logged with its cost, turns, model and wall time. Answers land in `.claude/om-reasoning/` marked `confidence: inferred` and are never auto-recorded as memories.
 
 **Debugging it:** call `health` first. Every failure in this layer presents identically as "no results" — a renamed memory folder, a moved launcher, an index registered to a different vault, a session with no identity — and `health` is what tells them apart. A caller reported as `ANONYMOUS` means the client never completed the roots handshake, so only `general`-scope memories are visible.
+
+**Under pi:** `.pi/om-memory.ts` serves the same vault from a consumer repo's pi session — same handler library, same audit log, same scope rules. Install is one line in the consumer repo's pi settings (`"extensions": ["<vault>/.pi/om-memory.ts"]`) plus a pointer in that repo's AGENTS.md; the vault can be pinned with `OM_VAULT_PATH`. The tools are the same six except `reason` (`om_search`, `om_expand`, `om_recall`, `om_remember`, `om_record_work`, `om_health`) — pi's tier-3 spawn port is still pending (F2).
 
 **Two guards worth knowing:** memories are never served as ordinary notes (they carry their own declared scope), and a memory that would reach nobody is refused rather than silently widened to `general`.
 
